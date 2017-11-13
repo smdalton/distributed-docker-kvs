@@ -62,9 +62,7 @@ def put_in_kvs(val):
     kvs_dict = this_server.kvs
     if request.method == 'PUT':
         print('got a put request')
-
-
-
+        
         try:
             logging.debug(val)
 
