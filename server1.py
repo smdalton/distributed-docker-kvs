@@ -4,9 +4,12 @@ import json
 from flask import Response
 import logging
 import re
+import time, datetime
 global this_server
 
 app = Flask(__name__)
+
+
 # from kvs_api import kvs_api
 
 # state object for this_server's identifying information
@@ -16,38 +19,92 @@ class Node(object):
     number_of_replicas = 0
     view_node_list = []
     my_ip = ''
-    my_port= ''
-    my_role=''
+    my_port = ''
+    my_role = ''
     kvs = {}
     causal_payload = {}
-    up_down = []
+    live_servers = []
+    replicas = []
 
     def __init__(self, env_vars):
         # env_vars is sys.argv
         self.number_of_replicas = env_vars[1]
         # list of all ip:port in the view ['ip1:port1', 'ip2:port2',... etc]
         self.view_node_list = env_vars[2].split(',')
+        self.my_ip_port = env_vars[3]
         self.my_ip = env_vars[3].split(':')[0]
         self.my_port = env_vars[3].split(':')[1]
-        self.my_role = 'replica' # to start
+        self.my_role = 'replica'  # to start
 
     def my_identity(self):
-        return this_server.my_ip + ":" + this_server.my_port
+        return self.my_ip_port
 
-    #def update_payload(self):
+    # check for the case where it pings itself in iteration
 
+    def determine_replicas(self):
+        # sort to order in precedence
+        self.view_node_list = self.view_node_list.sort()
 
+        # determine the live servers
+        self.live_servers = []
+        # pick the first K ip's from view that ARE LIVE and make them replicas
+
+        for ip in self.view_node_list:
+            if ping(ip) == 'up':
+                self.live_servers.append((ip, 'up'))
+            else:
+                self.live_Servers.append((ip, 'down'))
+        number_replicas = int(self.number_of_replicas)
 
 
 # state object for this node
 this_server = Node(sys.argv)
 
 
+def ping():
+    # make a get request and send it to the target IP, set timeout for 1s, test and possibly reset it to 2s
+    return 'up'
+
+#  The ping route returns this server's IP and
+
+@app.route('/kv-store/ping', methods=['GET'])
+def ping():
+    json_resp = json.dumps({
+        'result': 'success',
+        'time': time.time(),
+        'remote_server_ip': this_server.my_ip,
+    })
+    return Response(
+        json_resp,
+        status=403,
+        mimetype='application/json'
+    )
+
+
 def shutdown_server():
     func = request.environ.get('werkzeug.server.shutdown')
     if func is None:
-            raise RuntimeError('Not running with the Werkzeug Server')
+        raise RuntimeError('Not running with the Werkzeug Server')
     func()
+
+
+@app.route('/kv-store/get_node_details', methods=['GET'])
+def get_node_details():
+    if this_server.my_role == 'replica':
+        result = 'Yes'
+    elif this_server.my_role == 'forwarding':
+        result = 'No'
+    else:
+        result = 'get_node_details did not determine a role'
+    json_resp = json.dumps({
+        'result': 'success',
+        "replica": result,
+    })
+    return Response(
+        json_resp,
+        status=403,
+        mimetype='application/json'
+    )
 
 
 # necessary for remote start/stop
@@ -59,10 +116,11 @@ def shutdown():
 
 @app.route('/kv-store/<val>', methods=['PUT', 'GET'])
 def put_in_kvs(val):
+
     kvs_dict = this_server.kvs
     if request.method == 'PUT':
         print('got a put request')
-        
+
         try:
             logging.debug(val)
 
@@ -175,7 +233,7 @@ def put_in_kvs(val):
                 logging.debug(val)
                 json_resp = json.dumps(
                     {
-                        'result':'Success',
+                        'result': 'Success',
                         'value': kvs_dict[val]
                     }
                 )
@@ -208,13 +266,13 @@ def put_in_kvs(val):
 
 @app.route('/kv-store/update_view', methods=['PUT'])
 def update_view():
-    print(request.form)
+    # print(request.form)
     if request.form['type'] == 'add':
         # update the view list with a new server identity
         this_server.view_node_list.append(request.form['ip_port'])
-        #this_server.update_state() #update state will
+        # this_server.update_state() #update state will
         json_resp = json.dumps({
-            "msg":"success",
+            "msg": "success",
             "node_id": this_server.my_identity(),
             "number_of_nodes": len(this_server.view_node_list),
             "all servers": this_server.view_node_list,
@@ -227,7 +285,7 @@ def update_view():
     elif request.form['type'] == 'remove':
         this_server.view_node_list.remove(request.form['ip_port'])
         json_resp = json.dumps({
-            "msg":"success",
+            "msg": "success",
             "node_id": this_server.my_identity(),
             "number_of_nodes": len(this_server.view_node_list),
             "all servers": this_server.view_node_list,
@@ -239,19 +297,19 @@ def update_view():
         )
     else:
         return Response(
-            json.dumps({'update_view':'fall through no match'})
+            json.dumps({'update_view': 'fall through no match'})
         )
 
 
-@app.route('/server_name',methods=['GET'])
+@app.route('/server_name', methods=['GET'])
 def server_name():
     try:
         json_resp = json.dumps(
             {
-                'result' :'Success',
-                'value'  :'Server1',
+                'result': 'Success',
+                'value': 'Server1',
                 'ip:port': this_server.my_ip + ':' + this_server.my_port,
-                'View'   : this_server.view_node_list
+                'View': this_server.view_node_list
             }
         )
         return Response(
