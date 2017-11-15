@@ -1,15 +1,19 @@
 #!/bin/bash
-#Shane Dalton CMPS128
-#Initializes all servers
-#listed in the ports list
-cd ..
+
+# Author: Shane Dalton
+# Created for UCSC undergrad course CMPS128, Fall 2017
+
+# Initializes all servers listed in the ports list
+
+cd ../src
 echo "test"
 echo "From server:"
 num_servers=$1
 echo $num_servers
 K=4
 VIEW="10.0.0.21:8080,10.0.0.22:8080,10.0.0.23:8080,10.0.0.24:8080"
-#starting port range
+
+# Starting port range
 port=5000
 echo putting foo:add on server
 curl -X PUT localhost:5000/kv-store/foo -d val=add

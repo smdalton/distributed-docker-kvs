@@ -1,14 +1,25 @@
+"""
+    Author: Shane Dalton
+    Created for UCSC undergrad course CMPS 128, Fall 2017
+"""
+
 import sys
-from flask import Flask, abort, request
-import json
+
+from flask import Flask
+from flask import abort
+from flask import request
 from flask import Response
+
+import json
+
 import logging
+
 import re
-import time, datetime
+import time
+import datetime
 global this_server
 
 app = Flask(__name__)
-
 
 # from kvs_api import kvs_api
 

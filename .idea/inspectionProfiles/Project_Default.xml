@@ -1,0 +1,18 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyUnresolvedReferencesInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredIdentifiers">
+        <list>
+          <option value="src.CMPS128HW3KVSGetAllReplicas.*" />
+          <option value="src.CMPS128HW3KVSNodeDetails.localIPPort" />
+          <option value="src.CMPS128HW3KVSNodeDetails.nodesList" />
+          <option value="src.CMPS128HW3KVSNodeDetails.nodeStatus" />
+          <option value="src.CMPS128HW3KVSNodeDetails.CMPS128HW3Main" />
+          <option value="src.CMPS128HW3Main.CMPS128HW3GetAllReplicas" />
+          <option value="src.CMPS128HW3Main.CMPS128HW3KVSNodeDetails" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>

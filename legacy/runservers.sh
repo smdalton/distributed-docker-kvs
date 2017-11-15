@@ -1,8 +1,10 @@
 #!/bin/bash
-#Shane Dalton CMPS128
-#Initializes all servers
-#listed in the ports list
-cd ..
+# Author: Shane Dalton
+# Created for UCSC undergrad course CMPS128, Fall 2017
+
+# Initializes all servers listed in the ports list
+
+cd ../src/
 echo "test"
 echo "From server:"
 num_servers=$1
