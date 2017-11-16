@@ -23,32 +23,42 @@ import CMPS128HW3Settings
 """
 class CMPS128HW3KVSNodeDetails(Resource):
 
-    # Initialize class variables to point at global variables (for the sake of brevity)
-    def __init__(self):
-        self.nodeStatus = CMPS128HW3Settings.nodeStatus
-        self.localIPPort = CMPS128HW3Settings.localIPPort
-
-    # Get method to see if current instance is a replica
+    # Get method to see if current instance is a replica or not
     def get(self):
         try:
-            # If the IP:PORT value is a replica, then we will check its associated key. If it isn't then we return the
-            # appropriate response.
-            if self.nodeStatus[self.localIPPort] == "replica":
-                json_resp = json.dumps({
-                    "result": "success",
-                    "replica": "Yes"
-                })
-            else:
-                json_resp = json.dumps({
-                    "result": "success",
-                    "replica": "No"
-                })
-            # Return the response as JSON
-            return Response(
-                json_resp,
-                status=200,
-                mimetype='application/json'
-            )
+            # For each node in the list, if the IP:Port value of the local state is equal to an IP Port of
+            # a node, and if it's role is replica, then return a JSON response that indicates that it is
+            # a replica. If that node's role isn't a replica, then return a JSON response that indicates
+            # that it isn't a replica.
+            for node in CMPS128HW3Settings.nodesList:
+                if str(node.get_IPPort()) == str(CMPS128HW3Settings.localIPPort):
+                    if str(node.get_role()) == "replica":
+                        json_resp = json.dumps({
+                            "result": "success",
+                            "replica": "Yes"
+                        })
+                    else:
+                        json_resp = json.dumps({
+                            "result": "success",
+                            "replica": "No"
+                        })
+                    # Return the response as JSON
+                    return Response(
+                        json_resp,
+                        status=200,
+                        mimetype='application/json'
+                    )
+                
         except Exception as e:
             logging.error(e)
-            abort(400, message=str(e))
+            json_resp = json.dumps(
+                {
+                    "result":"error",
+                    "msg": str(e)
+                }
+            )
+            return Response(
+                json_resp,
+                status=404,
+                mimetype='application/json'
+            )

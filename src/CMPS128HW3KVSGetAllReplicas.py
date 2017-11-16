@@ -14,14 +14,10 @@ import CMPS128HW3Settings
 
 """
     In this file, we will return the number of replicas that are currently available in the key-value store.
-    :var nodesList: The global list from CMPS128HW3
+    :var nodesList: The global list of nodes from CMPS128HW3 to extrapolate data from
     :return: A HTTP response with the list of replicas
 """
 class CMPS128HW3KVSGetAllReplicas(Resource):
-
-    # Initialize class variables to point at global variables (for the sake of brevity)
-    def __init__(self):
-        self.replicaList = CMPS128HW3Settings.replicaList
 
     # GET method to get the list of replicas
     def get(self):
@@ -30,7 +26,7 @@ class CMPS128HW3KVSGetAllReplicas(Resource):
             # and append it to the local replicaList, to be turned into JSON in json_resp
             json_resp = json.dumps({
                 "result":"success",
-                "replicas": self.replicaList
+                "replicas": self.get_replicas()
             })
             # Return the response as JSON
             return Response(
@@ -40,4 +36,29 @@ class CMPS128HW3KVSGetAllReplicas(Resource):
             )
         except Exception as e:
             logging.error(e)
-            abort(400, message=str(e))
+            json_resp = json.dumps(
+                {
+                    "result":"error",
+                    "msg": str(e)
+                }
+            )
+            return Response(
+                json_resp,
+                status=404,
+                mimetype='application/json'
+            )
+
+    # Method to iterate through the list and check if each node is a replica. If so, it will get
+    # that node's IP and store it in a list to be returned to the caller
+    def get_replicas(self):
+
+        # Initially empty replica list to be returned to the caller
+        replicaList = []
+
+        # iterate through the list and if a node is a replica, append the IP:Port value to the replicaList
+        for node in CMPS128HW3Settings.nodesList:
+            if node.get_role() == "replica":
+                replicaList.append(node.get_IPPort())
+
+        # Return the replicaList
+        return replicaList
