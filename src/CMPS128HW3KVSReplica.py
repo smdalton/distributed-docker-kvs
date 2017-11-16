@@ -7,6 +7,7 @@ from flask_restful import Resource
 from flask_restful import abort
 from flask import request
 from flask import Response
+from datetime import datetime
 import json
 import logging
 import re
@@ -28,18 +29,18 @@ class CMPS128HW3KVSReplica(Resource):
        GET request
        :return: HTTP response
     """
-    def get(self, val):
+    def get(self, key):
         try:
             # If the requested argument is in the dictionary, then return a sucessful message with the last stored
             # value. If not, then return a 404 error message
-            logging.info("Value of key: " + str(KVSDict.get(val)))
+            logging.info("Value of key: " + str(KVSDict.get(key)))
 
-            if val in KVSDict:
-                logging.debug(val)
+            if key in KVSDict:
+                logging.debug(key)
                 json_resp = json.dumps(
                     {
                         'result':'Success',
-                        'value': KVSDict[val]
+                        'value': str(KVSDict[key])
                     }
                 )
                 # Return the response
@@ -69,9 +70,9 @@ class CMPS128HW3KVSReplica(Resource):
         PUT request
         :return: HTTP response
     """
-    def put(self, val):
+    def put(self, key):
         try:
-            logging.debug(val)
+            logging.debug(key)
 
             # Conditional to check if the input value is nothing or if there are just no arguments
             if request.form['val'] == '' or len(request.form['val']) == None:
@@ -88,8 +89,8 @@ class CMPS128HW3KVSReplica(Resource):
                 )
 
             # Conditional to check if the key is too long (> 200 chars)
-            logging.debug("Size of key: " + str(len(val)))
-            if len(val) > 200:
+            logging.debug("Size of key: " + str(len(key)))
+            if len(key) > 200:
                 json_resp = json.dumps(
                     {
                         'result': 'Error',
@@ -118,7 +119,7 @@ class CMPS128HW3KVSReplica(Resource):
                     mimetype='application/json'
                 )
             # Conditional to check if the input contains invalid characters outside of [a-zA-Z0-9_]
-            if not re.compile('[A-Za-z0-9_]').findall(val):
+            if not re.compile('[A-Za-z0-9_]').findall(key):
                 json_resp = json.dumps(
                     {
                         'result': 'Error',
@@ -133,11 +134,13 @@ class CMPS128HW3KVSReplica(Resource):
 
             # If the value is in the dictionary, then replace the value of the existing key with a new value
             # Else, make a new key-val pair in the dict if the key does not exist
-            if val in KVSDict:
+            if key in KVSDict:
                 # Replace the key-val pair in the dict with the new requested value
                 # Precondition: the key must already exist in the dict
                 logging.debug(request.form['val'])
-                KVSDict[val] = request.form['val']
+                KVSDict[key].val = request.form['val']
+                KVSDict[key].clock = KVSDict[key].clock + 1
+                KVSDict[key].timestamp = str(datetime.now())
                 json_resp = json.dumps(
                     {
                         'replaced': 'True',
@@ -150,17 +153,27 @@ class CMPS128HW3KVSReplica(Resource):
                     status=200,
                     mimetype='application/json'
                 )
-            elif val not in KVSDict:
+            elif key not in KVSDict:
                 logging.debug(request.form['val'])
                 # Add the key-val pair to the dictionary
-                KVSDict[val] = request.form['val']
+                newVal = json.dumps({
+                    'val': request.form['val'],
+                    'clock': 0,
+                    'timestamp': str(datetime.now())
+                })
+
+                KVSDict[key] = newVal
+
+                #KVSDict[key] = request.form['val'] old way
+
+
                 json_resp = json.dumps(
                     {
                         'replaced': 'False',
                         'msg': 'New key created'
                     }
                 )
-                logging.debug("Value in dict: " + KVSDict[val])
+                logging.debug("Value in dict: " + KVSDict[key])
                 # Return the response
                 return Response(
                     json_resp,

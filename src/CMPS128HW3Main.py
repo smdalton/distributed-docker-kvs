@@ -144,5 +144,7 @@ if __name__ == '__main__':
         settings_thread.start()
         main_thread = threading.Thread(target=CMPS128HW3Main)
         main_thread.start()
+
+
     except Exception as e:
         logging.error(e)
