@@ -34,13 +34,16 @@ class CMPS128HW3KVSReplica(Resource):
             # If the requested argument is in the dictionary, then return a sucessful message with the last stored
             # value. If not, then return a 404 error message
             logging.info("Value of key: " + str(KVSDict.get(key)))
+            print(type(KVSDict[key]))
 
             if key in KVSDict:
                 logging.debug(key)
+                # val = KVSDict[key]['val']
+                # print("val --->", val)
                 json_resp = json.dumps(
                     {
                         'result':'Success',
-                        'value': str(KVSDict[key])
+                        'value': KVSDict[key]['val']
                     }
                 )
                 # Return the response
@@ -156,11 +159,13 @@ class CMPS128HW3KVSReplica(Resource):
             elif key not in KVSDict:
                 logging.debug(request.form['val'])
                 # Add the key-val pair to the dictionary
-                newVal = json.dumps({
+                KVSDict["123"] = {'val': 456}
+                print("CHECK THIS OUT ", KVSDict["123"]['val'])
+                newVal = {
                     'val': request.form['val'],
                     'clock': 0,
                     'timestamp': str(datetime.now())
-                })
+                }
 
                 KVSDict[key] = newVal
 
@@ -173,7 +178,7 @@ class CMPS128HW3KVSReplica(Resource):
                         'msg': 'New key created'
                     }
                 )
-                logging.debug("Value in dict: " + KVSDict[key])
+                #logging.debug("Value in dict: " + KVSDict[key])
                 # Return the response
                 return Response(
                     json_resp,
