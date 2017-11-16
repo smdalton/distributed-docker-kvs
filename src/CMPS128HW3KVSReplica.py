@@ -8,9 +8,12 @@ from flask_restful import abort
 from flask import request
 from flask import Response
 from datetime import datetime
+from time import sleep
+from apscheduler.schedulers.background import BackgroundScheduler
 import json
 import logging
 import re
+import threading
 
 """
     Initialize an empty dictionary.
@@ -18,17 +21,39 @@ import re
 """
 global KVSDict
 KVSDict = dict()
+gossipTimer = 5;
 
+
+
+def gossip():
+    try:
+        print ("Gossiping")
+        
+    except Exception as e:
+        logging.error(e)
+        abort(400, message=str(e))
+        
+
+sched = BackgroundScheduler(daemon=True)
+sched.add_job(gossip,'interval',seconds=3)
+sched.start()
+        
 """
     Class that implements the KVS. Refer to the README for specifications and functional guarantees.
 """
 # TODO: Clean up *all* logic in this class
 class CMPS128HW3KVSReplica(Resource):
+    
+
+
+            
 
     """
        GET request
        :return: HTTP response
     """
+
+    
     def get(self, key):
         try:
             # If the requested argument is in the dictionary, then return a sucessful message with the last stored
@@ -75,6 +100,8 @@ class CMPS128HW3KVSReplica(Resource):
     """
     def put(self, key):
         try:
+            
+            # self.gossip()
             logging.debug(key)
 
             # Conditional to check if the input value is nothing or if there are just no arguments
@@ -141,9 +168,9 @@ class CMPS128HW3KVSReplica(Resource):
                 # Replace the key-val pair in the dict with the new requested value
                 # Precondition: the key must already exist in the dict
                 logging.debug(request.form['val'])
-                KVSDict[key].val = request.form['val']
-                KVSDict[key].clock = KVSDict[key].clock + 1
-                KVSDict[key].timestamp = str(datetime.now())
+                KVSDict[key]['val'] = request.form['val']
+                KVSDict[key]['clock'] = KVSDict[key]['clock'] + 1
+                KVSDict[key]['timestamp'] = str(datetime.now())
                 json_resp = json.dumps(
                     {
                         'replaced': 'True',
@@ -189,3 +216,4 @@ class CMPS128HW3KVSReplica(Resource):
         except Exception as e:
             logging.error(e)
             abort(400, message=str(e))
+            
