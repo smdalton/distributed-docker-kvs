@@ -9,6 +9,7 @@ from flask import Flask
 from flask import abort
 from flask import request
 from flask import Response
+from apscheduler.schedulers.background import BackgroundScheduler
 
 import json
 
@@ -23,6 +24,19 @@ global KVSDict
 KVSDict = dict()
 
 app = Flask(__name__)
+
+def gossip():
+    try:
+        print ("Gossiping: ", KVSDict)
+
+    except Exception as e:
+        logging.error(e)
+        abort(400, message=str(e))
+
+
+sched = BackgroundScheduler(daemon=True)
+sched.add_job(gossip,'interval',seconds=3)
+sched.start()
 
 # from kvs_api import kvs_api
 
@@ -131,7 +145,7 @@ def shutdown():
 @app.route('/kv-store/<key>', methods=['PUT', 'GET'])
 def put_in_kvs(key):
 
-    kvs_dict = this_server.kvs
+    # kvs_dict = this_server.kvs
     if request.method == 'PUT':
         print('got a put request')
 
@@ -198,13 +212,15 @@ def put_in_kvs(key):
 
             # If the value is in the dictionary, then replace the value of the existing key with a new value
             # Else, make a new key-val pair in the dict if the key does not exist
-            if key in kvs_dict:
+            if key in KVSDict:
                 # Replace the key-val pair in the dict with the new requested value
                 # Precondition: the key must already exist in the dict
-                print("Key already exists", kvs_dict)
+                print("Key already exists", KVSDict)
                 logging.debug(key)
 
-                kvs_dict[key]['val'] = request.form['val']
+                KVSDict[key]['val'] = request.form['val']
+                KVSDict[key]['clock'] = KVSDict[key]['clock'] + 1
+                KVSDict[key]['timestamp'] = str(datetime.now())
                 json_resp = json.dumps(
                     {
                         'replaced': 'True',
@@ -217,7 +233,7 @@ def put_in_kvs(key):
                     status=200,
                     mimetype='application/json'
                 )
-            elif key not in kvs_dict:
+            elif key not in KVSDict:
 
                 newVal = {
                     'val': request.form['val'],
@@ -225,8 +241,8 @@ def put_in_kvs(key):
                     'timestamp': str(datetime.now())
                 }
 
-                kvs_dict[key] = newVal
-                print("----->", kvs_dict[key])
+                KVSDict[key] = newVal
+                print("----->", KVSDict[key])
                 #KVSDict[key] = request.form['val'] old way
 
 
@@ -253,14 +269,14 @@ def put_in_kvs(key):
         try:
             # If the requested argument is in the dictionary, then return a sucessful message with the last stored
             # value. If not, then return a 404 error message
-            logging.info("Value of key: " + str(kvs_dict.get(key)))
+            logging.info("Value of key: " + str(KVSDict.get(key)))
 
-            if key in kvs_dict:
+            if key in KVSDict:
                 logging.debug(key)
                 json_resp = json.dumps(
                     {
                         'result': 'Success',
-                        'value': kvs_dict[key]
+                        'value': KVSDict[key]
                     }
                 )
                 # Return the response
