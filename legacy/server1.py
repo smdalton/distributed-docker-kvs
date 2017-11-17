@@ -38,13 +38,13 @@ class Node(object):
     replicas = []
 
     def __init__(self, env_vars):
-        # env_vars is sys.argv
-        self.number_of_replicas = env_vars[1]
+        env_vars is sys.argv
+        self.number_of_replicas = 1
         # list of all ip:port in the view ['ip1:port1', 'ip2:port2',... etc]
-        self.view_node_list = env_vars[2].split(',')
-        self.my_ip_port = env_vars[3]
-        self.my_ip = env_vars[3].split(':')[0]
-        self.my_port = env_vars[3].split(':')[1]
+        self.view_node_list = ["1"]
+        self.my_ip_port = "127.0.0.1:8080"
+        self.my_ip = "127.0.0.1"
+        self.my_port = "8080"
         self.my_role = 'replica'  # to start
 
     def my_identity(self):
@@ -125,18 +125,18 @@ def shutdown():
     return 'Server shutting down \n'
 
 
-@app.route('/kv-store/<val>', methods=['PUT', 'GET'])
-def put_in_kvs(val):
+@app.route('/kv-store/<key>', methods=['PUT', 'GET'])
+def put_in_kvs(key):
 
     kvs_dict = this_server.kvs
     if request.method == 'PUT':
         print('got a put request')
 
         try:
-            logging.debug(val)
+            logging.debug(key)
 
             # Conditional to check if the input value is nothing or if there are just no arguments
-            if request.form['val'] == '' or len(request.form['val']) == 0:
+            if request.form['key'] == '' or len(request.form['key']) == 0:
                 json_resp = json.dumps(
                     {
                         'result': 'Error',
@@ -150,8 +150,8 @@ def put_in_kvs(val):
                 )
 
             # Conditional to check if the key is too long (> 200 chars)
-            logging.debug("Size of key: " + str(len(val)))
-            if len(val) > 200:
+            logging.debug("Size of key: " + str(len(key)))
+            if len(key) > 200:
                 json_resp = json.dumps(
                     {
                         'result': 'Error',
@@ -165,9 +165,9 @@ def put_in_kvs(val):
                 )
 
             # Conditional to check if input is greater than 1MB
-            logging.debug("Size of val: " + str(len(request.form['val'])))
+            logging.debug("Size of val: " + str(len(request.form['key'])))
 
-            if len(request.form['val']) > 1000000:
+            if len(request.form['key']) > 1000000:
                 json_resp = json.dumps(
                     {
                         'result': 'Error',
@@ -180,7 +180,7 @@ def put_in_kvs(val):
                     mimetype='application/json'
                 )
             # Conditional to check if the input contains invalid characters outside of [a-zA-Z0-9_]
-            if not re.compile('[A-Za-z0-9_]').findall(val):
+            if not re.compile('[A-Za-z0-9_]').findall(key):
                 json_resp = json.dumps(
                     {
                         'result': 'Error',
@@ -195,11 +195,11 @@ def put_in_kvs(val):
 
             # If the value is in the dictionary, then replace the value of the existing key with a new value
             # Else, make a new key-val pair in the dict if the key does not exist
-            if val in kvs_dict:
+            if key in kvs_dict:
                 # Replace the key-val pair in the dict with the new requested value
                 # Precondition: the key must already exist in the dict
-                logging.debug(request.form['val'])
-                kvs_dict[val] = request.form['val']
+                logging.debug(request.form['key'])
+                kvs_dict[key] = request.form['key']
                 json_resp = json.dumps(
                     {
                         'replaced': 'True',
@@ -212,17 +212,17 @@ def put_in_kvs(val):
                     status=200,
                     mimetype='application/json'
                 )
-            elif val not in kvs_dict:
-                logging.debug(request.form['val'])
+            elif key not in kvs_dict:
+                logging.debug(request.form['key'])
                 # Add the key-val pair to the dictionary
-                kvs_dict[val] = request.form['val']
+                kvs_dict[key] = request.form['key']
                 json_resp = json.dumps(
                     {
                         'replaced': 'False',
                         'msg': 'New key created'
                     }
                 )
-                logging.debug("Value in dict: " + kvs_dict[val])
+                logging.debug("Value in dict: " + kvs_dict[key])
                 # Return the response
                 return Response(
                     json_resp,
@@ -238,14 +238,14 @@ def put_in_kvs(val):
         try:
             # If the requested argument is in the dictionary, then return a sucessful message with the last stored
             # value. If not, then return a 404 error message
-            logging.info("Value of key: " + str(kvs_dict.get(val)))
+            logging.info("Value of key: " + str(kvs_dict.get(key)))
 
-            if val in kvs_dict:
-                logging.debug(val)
+            if key in kvs_dict:
+                logging.debug(key)
                 json_resp = json.dumps(
                     {
                         'result': 'Success',
-                        'value': kvs_dict[val]
+                        'value': kvs_dict[key]
                     }
                 )
                 # Return the response
@@ -272,7 +272,7 @@ def put_in_kvs(val):
             abort(400, message=str(e))
 
     else:
-        return 'fall through error kv-store/<val>'
+        return 'fall through error kv-store/<key>'
 
 
 @app.route('/kv-store/update_view', methods=['PUT'])
