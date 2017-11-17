@@ -136,7 +136,7 @@ def put_in_kvs(key):
             logging.debug(key)
 
             # Conditional to check if the input value is nothing or if there are just no arguments
-            if request.form['key'] == '' or len(request.form['key']) == 0:
+            if request.form['val'] == '' or len(request.form['val']) == 0:
                 json_resp = json.dumps(
                     {
                         'result': 'Error',
@@ -165,9 +165,9 @@ def put_in_kvs(key):
                 )
 
             # Conditional to check if input is greater than 1MB
-            logging.debug("Size of val: " + str(len(request.form['key'])))
+            logging.debug("Size of val: " + str(len(request.form['val'])))
 
-            if len(request.form['key']) > 1000000:
+            if len(request.form['val']) > 1000000:
                 json_resp = json.dumps(
                     {
                         'result': 'Error',
@@ -198,8 +198,8 @@ def put_in_kvs(key):
             if key in kvs_dict:
                 # Replace the key-val pair in the dict with the new requested value
                 # Precondition: the key must already exist in the dict
-                logging.debug(request.form['key'])
-                kvs_dict[key] = request.form['key']
+                logging.debug(request.form['val'])
+                kvs_dict[key] = request.form['val']
                 json_resp = json.dumps(
                     {
                         'replaced': 'True',
@@ -213,9 +213,9 @@ def put_in_kvs(key):
                     mimetype='application/json'
                 )
             elif key not in kvs_dict:
-                logging.debug(request.form['key'])
+                logging.debug(request.form['val'])
                 # Add the key-val pair to the dictionary
-                kvs_dict[key] = request.form['key']
+                kvs_dict[key] = request.form['val']
                 json_resp = json.dumps(
                     {
                         'replaced': 'False',
