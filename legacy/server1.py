@@ -365,7 +365,18 @@ def server_name():
 
 @app.route('/gossip', methods=['PUT'])
 def gossip():
-    return 'Recieving gossip\n'
+    dictA = request.form['dict']
+    json_resp = json.dumps({
+        "msg": "success",
+        "dict": dictA
+    })
+    return Response(
+        json_resp,
+        status=200,
+        mimetype='application/json'
+    )
+    print('Gossip recieving dictionary: ', request.form['dict'])
+    return
 
 
 if __name__ == '__main__':
