@@ -27,8 +27,8 @@ app = Flask(__name__)
 
 def gossip():
     try:
-        print ("Gossiping: ", KVSDict)
-
+        # print ("Gossiping: ", KVSDict)
+        return
     except Exception as e:
         logging.error(e)
         abort(400, message=str(e))
@@ -362,6 +362,10 @@ def server_name():
     except Exception as e:
         logging.error(e)
         abort(400, message=str(e))
+
+@app.route('/gossip', methods=['PUT'])
+def gossip():
+    return 'Recieving gossip\n'
 
 
 if __name__ == '__main__':
