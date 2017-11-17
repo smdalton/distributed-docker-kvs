@@ -16,8 +16,11 @@ import logging
 
 import re
 import time
-import datetime
+from datetime import datetime
 global this_server
+
+global KVSDict
+KVSDict = dict()
 
 app = Flask(__name__)
 
@@ -198,8 +201,10 @@ def put_in_kvs(key):
             if key in kvs_dict:
                 # Replace the key-val pair in the dict with the new requested value
                 # Precondition: the key must already exist in the dict
-                logging.debug(request.form['val'])
-                kvs_dict[key] = request.form['val']
+                print("Key already exists", kvs_dict)
+                logging.debug(key)
+
+                kvs_dict[key]['val'] = request.form['val']
                 json_resp = json.dumps(
                     {
                         'replaced': 'True',
@@ -213,22 +218,32 @@ def put_in_kvs(key):
                     mimetype='application/json'
                 )
             elif key not in kvs_dict:
-                logging.debug(request.form['val'])
-                # Add the key-val pair to the dictionary
-                kvs_dict[key] = request.form['val']
+
+                newVal = {
+                    'val': request.form['val'],
+                    'clock': 0,
+                    'timestamp': str(datetime.now())
+                }
+
+                kvs_dict[key] = newVal
+                print("----->", kvs_dict[key])
+                #KVSDict[key] = request.form['val'] old way
+
+
                 json_resp = json.dumps(
                     {
                         'replaced': 'False',
                         'msg': 'New key created'
                     }
                 )
-                logging.debug("Value in dict: " + kvs_dict[key])
+                #logging.debug("Value in dict: " + KVSDict[key])
                 # Return the response
                 return Response(
                     json_resp,
                     status=201,
                     mimetype='application/json'
                 )
+
 
         except Exception as e:
             logging.error(e)
