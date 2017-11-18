@@ -104,9 +104,13 @@ def compare(key1, key2):
 
 
 #docker = 'loading from docker env variables
-docker = 'loading single server'
-#docker = 'load state from command line'
+#docker = 'loading single server'
 
+
+
+docker = 'load state from command line'
+# Like this: $python server1.py 3 "localhost:5000, localhost:5001, localhost:5002" "localhost:5000"
+#  where 3 is the number of nodes and the string is the VIEW variable
 
 class Node(object):
     number_of_replicas = 0
@@ -234,123 +238,156 @@ def put_in_kvs(key):
 
     # kvs_dict = this_server.kvs
     if request.method == 'PUT':
-        print('got a put request')
+       # print('got a put request')
 
-        try:
-            logging.debug(key)
+        #try:
+        logging.debug(key)
 
-            # Conditional to check if the input value is nothing or if there are just no arguments
-            if request.form['val'] == '' or len(request.form['val']) == 0:
-                json_resp = json.dumps(
-                    {
-                        'result': 'Error',
-                        'msg': 'No value provided'
-                    }
-                )
-                return Response(
-                    json_resp,
-                    status=403,
-                    mimetype='application/json'
-                )
-
-            # Conditional to check if the key is too long (> 200 chars)
-            logging.debug("Size of key: " + str(len(key)))
-            if len(key) > 200:
-                json_resp = json.dumps(
-                    {
-                        'result': 'Error',
-                        'msg': 'Key not valid'
-                    }
-                )
-                return Response(
-                    json_resp,
-                    status=403,
-                    mimetype='application/json'
-                )
-
-            # Conditional to check if input is greater than 1MB
-            logging.debug("Size of val: " + str(len(request.form['val'])))
-
-            if len(request.form['val']) > 1000000:
-                json_resp = json.dumps(
-                    {
-                        'result': 'Error',
-                        'msg': 'Object too large'
-                    }
-                )
-                return Response(
-                    json_resp,
-                    status=404,
-                    mimetype='application/json'
-                )
-            # Conditional to check if the input contains invalid characters outside of [a-zA-Z0-9_]
-            if not re.compile('[A-Za-z0-9_]').findall(key):
-                json_resp = json.dumps(
-                    {
-                        'result': 'Error',
-                        'msg': 'Key not valid'
-                    }
-                )
-                return Response(
-                    json_resp,
-                    status=404,
-                    mimetype='application/json'
-                )
-
-
-
-            if key in KVSDict:
-                # Replace the key-val pair in the dict with the new requested value
-                # Precondition: the key must already exist in the dict
-                print("Key already exists", KVSDict)
-                logging.debug(key)
-                KVSDict[key]['val'] = request.form['val']
-                KVSDict[key]['clock'] = KVSDict[key]['clock'] + 1
-                KVSDict[key]['timestamp'] = str(datetime.now())
-
-                json_resp = json.dumps(
-                    {
-                        'replaced': 'True',
-                        'msg': 'Value of existing key replaced'
-                    }
-                )
-                # Return the response
-                return Response(
-                    json_resp,
-                    status=200,
-                    mimetype='application/json'
-                )
-            elif key not in KVSDict:
-
-                newVal = {
-                    'val': request.form['val'],
-                    'clock': 0,
-                    'timestamp': str(datetime.now())
+        # Conditional to check if the input value is nothing or if there are just no arguments
+        if request.form['val'] == '' or len(request.form['val']) == 0:
+            json_resp = json.dumps(
+                {
+                    'result': 'Error',
+                    'msg': 'No value provided'
                 }
+            )
+            return Response(
+                json_resp,
+                status=403,
+                mimetype='application/json'
+            )
 
-                KVSDict[key] = newVal
-                print("----->", KVSDict[key])
-                #KVSDict[key] = request.form['val'] old way
+        # Conditional to check if the key is too long (> 200 chars)
+        logging.debug("Size of key: " + str(len(key)))
+        if len(key) > 200:
+            json_resp = json.dumps(
+                {
+                    'result': 'Error',
+                    'msg': 'Key not valid'
+                }
+            )
+            return Response(
+                json_resp,
+                status=403,
+                mimetype='application/json'
+            )
+
+        # Conditional to check if input is greater than 1MB
+        logging.debug("Size of val: " + str(len(request.form['val'])))
+
+        if len(request.form['val']) > 1000000:
+            json_resp = json.dumps(
+                {
+                    'result': 'Error',
+                    'msg': 'Object too large'
+                }
+            )
+            return Response(
+                json_resp,
+                status=404,
+                mimetype='application/json'
+            )
+        # Conditional to check if the input contains invalid characters outside of [a-zA-Z0-9_]
+        if not re.compile('[A-Za-z0-9_]').findall(key):
+            json_resp = json.dumps(
+                {
+                    'result': 'Error',
+                    'msg': 'Key not valid'
+                }
+            )
+            return Response(
+                json_resp,
+                status=404,
+                mimetype='application/json'
+            )
 
 
-                json_resp = json.dumps(
-                    {
-                        'replaced': 'False',
-                        'msg': 'New key created'
-                    }
-                )
-                # logging.debug("Value in dict: " + KVSDict[key])
-                # Return the response
-                return Response(
-                    json_resp,
-                    status=201,
-                    mimetype='application/json'
-                )
+
+        if key in KVSDict:
 
 
-        except Exception as e:
-            logging.error(e)
-            abort(400, message=str(e))
+
+            print("Key already exists", KVSDict)
+
+            #Experimental
+            #
+            # local = KVSDict[key]['clock']
+            # incoming = request.form['causal_payload']
+            # # if local < incoming then update local with incoming
+            # if (request.form['causal_payload'] != '') \
+            #         and int(KVSDict[key]['clock']) < int(request.form['causal_payload']):
+            #     KVSDict[key]['val'] = request.form['val'] #update the val
+            #     KVSDict[key]['clock'] = str(request.form['causal_payload']) #update the clock
+            #     KVSDict[key]['timestamp'] = str(request.form['timestamp']) #update the timestamp
+            #     json_resp = json.dumps(
+            #         {
+            #             'replaced': 'True',
+            #             'msg': 'Value of existing key replaced'
+            #         }
+            #     )
+            #     # Return the response
+            #     return Response(
+            #         json_resp,
+            #         status=200,
+            #         mimetype='application/json'
+            #     )
+            # elif (request.form['causal_payload'] != '') \
+            #         and int(KVSDict[key]['clock']) == int(request.form['causal_payload']):
+            #     #break the tie
+            #     local = int(KVSDict[key]['timestamp'])
+            #     incoming = int(request.form['timestamp'])
+            #
+            #     if local >incoming:
+
+
+            KVSDict[key]['val'] = request.form['val']
+            KVSDict[key]['clock'] = KVSDict[key]['clock'] + 1
+            KVSDict[key]['timestamp'] = str(time.time())
+
+            json_resp = json.dumps(
+                {
+                    'replaced': 'True',
+                    'msg': 'Value of existing key replaced'
+                }
+            )
+            # Return the response
+            return Response(
+                json_resp,
+                status=200,
+                mimetype='application/json'
+            )
+
+        elif key not in KVSDict:
+
+            newVal = {
+                'val': request.form['val'],
+                'clock': 0,
+                'timestamp': str(time.time())
+            }
+
+            KVSDict[key] = newVal
+            print("----->", KVSDict[key])
+            #KVSDict[key] = request.form['val'] old way
+
+
+            json_resp = json.dumps(
+                {
+                    'replaced': 'False',
+                    'msg': 'New key created'
+                }
+            )
+            # logging.debug("Value in dict: " + KVSDict[key])
+            # Return the response
+            return Response(
+                json_resp,
+                status=201,
+                mimetype='application/json'
+            )
+
+        #
+        # except Exception as e:
+        #     logging.error(e)
+        #     abort(400, message=str(e))
 
     elif request.method == 'GET':
         try:
@@ -364,7 +401,10 @@ def put_in_kvs(key):
                 json_resp = json.dumps(
                     {
                         'result': 'Success',
-                        'value': KVSDict[key]
+                        'value': KVSDict[key]['val'],
+                        'node_id': str(this_server.my_identity()),
+                        'causal_payload': KVSDict[key]['clock'],
+                        'timestamp': KVSDict[key]['timestamp']
                     }
                 )
                 # Return the response

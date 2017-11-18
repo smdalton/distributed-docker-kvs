@@ -4,7 +4,7 @@
 
 # Initializes all servers listed in the ports list
 
-
+cd ../src/
 echo "test"
 echo "From server:"
 num_servers=$1
