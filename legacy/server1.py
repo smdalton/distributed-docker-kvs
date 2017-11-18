@@ -10,7 +10,7 @@ from flask import abort
 from flask import request
 from flask import Response
 from apscheduler.schedulers.background import BackgroundScheduler
-
+import os
 import json
 import ast
 import logging
@@ -27,7 +27,8 @@ app = Flask(__name__)
 
 def gossip():
     try:
-        # print ("Gossiping: ", KVSDict)
+        #print ("Gossiping: ", KVSDict)
+
         return
     except Exception as e:
         logging.error(e)
@@ -76,9 +77,35 @@ def compare(key1, key2):
             return key2
 
 
-# from kvs_api import kvs_api
-
 # state object for this_server's identifying information
+
+"""
+ CMPS128HW3Settings.localIPPort = os.getenv('IPPORT')
+        logging.debug("Value of IP:PORT: " + str(CMPS128HW3Settings.localIPPort))
+
+        localIP = os.getenv('IPPORT').split(":")[0]
+        logging.debug("Value of local IP: " + str(localIP))
+
+        my_port = os.getenv('IPPORT').split(":")[1]
+        logging.debug("Value of local port: " + str(localPort))
+
+        # Number of total nodes
+        numOfNodes = len(os.getenv('VIEW').split(","))
+        logging.debug("Number of nodes: " + str(numOfNodes))
+
+        # Number of replicas determined by client
+        numOfReplicas = int(os.getenv('K'))
+        logging.info("Number of replicas: " + str(numOfReplicas))
+
+        # All the nodes stored in the initial "VIEW" list
+        viewList = os.getenv('VIEW').split(",")
+        logging.debug("List of all IP:PORT values in the VIEW: " + str(viewList))
+"""
+
+
+#docker = 'loading from docker env variables
+docker = 'loading single server'
+#docker = 'load state from command line'
 
 
 class Node(object):
@@ -87,25 +114,46 @@ class Node(object):
     my_ip = ''
     my_port = ''
     my_role = ''
-    kvs = {}
     causal_payload = {}
     live_servers = []
     replicas = []
 
     def __init__(self, env_vars):
-        env_vars is sys.argv
-        self.number_of_replicas = 1
-        # list of all ip:port in the view ['ip1:port1', 'ip2:port2',... etc]
-        self.view_node_list = ["1"]
-        self.my_ip_port = "127.0.0.1:8080"
-        self.my_ip = "127.0.0.1"
-        self.my_port = "8080"
-        self.my_role = 'replica'  # to start
+
+        if docker == 'loading single server':
+            print(env_vars)
+            self.number_of_replicas = 1
+            self.view_node_list = ["1"]
+            self.my_ip_port = "127.0.0.1:8080"
+            self.my_ip = "127.0.0.1"
+            self.my_port = "8080"
+            self.my_role = 'replica'  # to start
+
+        if docker == 'loading from docker env variables':
+            self.view_node_list = os.getenv('VIEW').split(",")
+            self.my_ip_port = os.getenv('IPPORT')
+            self.my_ip = self.my_ip_port.split(":")[0]
+            self.my_port = self.my_ip_port.split(':')[1]
+            self.view_node_list = os.getenv('VIEW').split(",")
+            self.number_of_replicas =  len(self.view_node_list)
+
+        elif docker == 'load state from command line':
+            # env_vars is sys.argv
+            print(env_vars)
+            self.number_of_replicas = env_vars[1]
+            # list of all ip:port in the view ['ip1:port1', 'ip2:port2',... etc]
+            self.view_node_list = env_vars[2].split(',')
+            self.my_ip_port = env_vars[3]
+            self.my_ip = env_vars[3].split(':')[0]
+            self.my_port = env_vars[3].split(':')[1]
+            self.my_role = 'replica'  # to start
 
     def my_identity(self):
         return self.my_ip_port
 
-    # check for the case where it pings itself in iteration
+
+    #def update_view(self, new_node):
+
 
     def determine_replicas(self):
         # sort to order in precedence
@@ -128,7 +176,8 @@ this_server = Node(sys.argv)
 
 
 def ping():
-    # make a get request and send it to the target IP, set timeout for 1s, test and possibly reset it to 2s
+    # make a get request and send it to the target IP, set timeout
+    # for 1s, test and possibly reset it to 2s
     return 'up'
 
 #  The ping route returns this server's IP and
@@ -248,17 +297,17 @@ def put_in_kvs(key):
                     mimetype='application/json'
                 )
 
-            # If the value is in the dictionary, then replace the value of the existing key with a new value
-            # Else, make a new key-val pair in the dict if the key does not exist
+
+
             if key in KVSDict:
                 # Replace the key-val pair in the dict with the new requested value
                 # Precondition: the key must already exist in the dict
                 print("Key already exists", KVSDict)
                 logging.debug(key)
-
                 KVSDict[key]['val'] = request.form['val']
                 KVSDict[key]['clock'] = KVSDict[key]['clock'] + 1
                 KVSDict[key]['timestamp'] = str(datetime.now())
+
                 json_resp = json.dumps(
                     {
                         'replaced': 'True',
@@ -290,7 +339,7 @@ def put_in_kvs(key):
                         'msg': 'New key created'
                     }
                 )
-                #logging.debug("Value in dict: " + KVSDict[key])
+                # logging.debug("Value in dict: " + KVSDict[key])
                 # Return the response
                 return Response(
                     json_resp,
@@ -305,7 +354,8 @@ def put_in_kvs(key):
 
     elif request.method == 'GET':
         try:
-            # If the requested argument is in the dictionary, then return a sucessful message with the last stored
+            # If the requested argument is in the dictionary,
+            # then return a sucessful message with the last stored
             # value. If not, then return a 404 error message
             logging.info("Value of key: " + str(KVSDict.get(key)))
 

@@ -4,7 +4,7 @@
 
 # Initializes all servers listed in the ports list
 
-cd ../src/
+
 echo "test"
 echo "From server:"
 num_servers=$1
@@ -17,6 +17,7 @@ for i in $(seq 1 $num_servers)		#"${ports[@]}"
 do
 	
 	echo "Raising server at localhost:$port"
-	python3 server1.py $K $VIEW localhost:$port &
+	python server1.py $K $VIEW localhost:$port &
 	let "port=port+1"
+	sleep 1
 done 
