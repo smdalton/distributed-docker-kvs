@@ -3,8 +3,6 @@
   <component name="ChangeListManager">
     <list default="true" id="8baa3c2f-5a96-4d10-b989-b13cef51399d" name="Default" comment="">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/legacy/kvs-get-test.sh" afterPath="$PROJECT_DIR$/legacy/kvs-get-test.sh" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/legacy/runservers.sh" afterPath="$PROJECT_DIR$/legacy/runservers.sh" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/legacy/server1.py" afterPath="$PROJECT_DIR$/legacy/server1.py" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -55,11 +53,11 @@
           <file leaf-file-name="server1.py" pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/legacy/server1.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="283">
-                  <caret line="123" column="16" lean-forward="true" selection-start-line="123" selection-start-column="16" selection-end-line="123" selection-end-column="16" />
+                <state relative-caret-position="163">
+                  <caret line="115" column="0" lean-forward="true" selection-start-line="115" selection-start-column="0" selection-end-line="115" selection-end-column="0" />
                   <folding>
                     <element signature="e#92#102#0" expanded="true" />
-                    <element signature="e#7079#7133#0" expanded="false" />
+                    <element signature="e#7081#7135#0" expanded="false" />
                   </folding>
                 </state>
               </provider>
@@ -284,7 +282,14 @@
       <option name="project" value="LOCAL" />
       <updated>1511033165269</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="set to load static server. network wide update_view in progress implmeneted mainly in routes update_view, secondary_update and in function Node.update_view()">
+      <created>1511122971006</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1511122971006</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -342,7 +347,8 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="PAramaterized startup with docker variable to enable different build configurations with a single flag: docker = ' value ' line 107" />
     <MESSAGE value="Paramaterized startup with docker variable to enable different build configurations with a single flag: docker = ' value ' line 107&#10;see example for how to invoke the flask server with multiple servers" />
-    <option name="LAST_COMMIT_MESSAGE" value="Paramaterized startup with docker variable to enable different build configurations with a single flag: docker = ' value ' line 107&#10;see example for how to invoke the flask server with multiple servers" />
+    <MESSAGE value="set to load static server. network wide update_view in progress implmeneted mainly in routes update_view, secondary_update and in function Node.update_view()" />
+    <option name="LAST_COMMIT_MESSAGE" value="set to load static server. network wide update_view in progress implmeneted mainly in routes update_view, secondary_update and in function Node.update_view()" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -624,7 +630,7 @@
           <caret line="122" column="0" lean-forward="true" selection-start-line="122" selection-start-column="0" selection-end-line="122" selection-end-column="0" />
           <folding>
             <element signature="e#92#102#0" expanded="true" />
-            <element signature="e#7079#7133#0" expanded="false" />
+            <element signature="e#7081#7135#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -663,11 +669,11 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/legacy/server1.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="283">
-          <caret line="123" column="16" lean-forward="true" selection-start-line="123" selection-start-column="16" selection-end-line="123" selection-end-column="16" />
+        <state relative-caret-position="163">
+          <caret line="115" column="0" lean-forward="true" selection-start-line="115" selection-start-column="0" selection-end-line="115" selection-end-column="0" />
           <folding>
             <element signature="e#92#102#0" expanded="true" />
-            <element signature="e#7079#7133#0" expanded="false" />
+            <element signature="e#7081#7135#0" expanded="false" />
           </folding>
         </state>
       </provider>

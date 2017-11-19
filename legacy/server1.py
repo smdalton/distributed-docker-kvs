@@ -113,6 +113,8 @@ docker = 'loading statically defined server'
 #docker = 'load state from command line'
 
 
+
+
 # Like this: $python server1.py 3 "localhost:5000, localhost:5001, localhost:5002" "localhost:5000"
 #  where 3 is the number of nodes and the string is the VIEW variable
 
