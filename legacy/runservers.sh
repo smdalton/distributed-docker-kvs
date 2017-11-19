@@ -4,13 +4,13 @@
 
 # Initializes all servers listed in the ports list
 
-cd ../src/
 echo "test"
 echo "From server:"
 num_servers=$1
 echo $num_servers
 K=4
-VIEW="10.0.0.21:8080,10.0.0.22:8080,10.0.0.23:8080,10.0.0.24:8080"
+VIEW1="10.0.0.21:8080,10.0.0.22:8080,10.0.0.23:8080,10.0.0.24:8080"
+VIEW="localhost:5000,localhost:5001"
 #starting port range
 port=5000
 for i in $(seq 1 $num_servers)		#"${ports[@]}"

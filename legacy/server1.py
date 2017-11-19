@@ -5,10 +5,12 @@
 
 import sys
 
+import requests
 from flask import Flask
 from flask import abort
 from flask import request
 from flask import Response
+
 from apscheduler.schedulers.background import BackgroundScheduler
 import os
 import json
@@ -103,12 +105,14 @@ def compare(key1, key2):
 """
 
 
+
+
+
 #docker = 'loading from docker env variables
-#docker = 'loading single server'
+docker = 'loading statically defined server'
+#docker = 'load state from command line'
 
 
-
-docker = 'load state from command line'
 # Like this: $python server1.py 3 "localhost:5000, localhost:5001, localhost:5002" "localhost:5000"
 #  where 3 is the number of nodes and the string is the VIEW variable
 
@@ -121,10 +125,11 @@ class Node(object):
     causal_payload = {}
     live_servers = []
     replicas = []
+    view_clock = 0
 
     def __init__(self, env_vars):
 
-        if docker == 'loading single server':
+        if docker == 'loading statically defined server':
             print(env_vars)
             self.number_of_replicas = 1
             self.view_node_list = ["1"]
@@ -156,7 +161,20 @@ class Node(object):
         return self.my_ip_port
 
 
-    #def update_view(self, new_node):
+    def update_view(self):
+        for node in self.view_node_list:
+            if node != self.my_ip_port:
+                print("\n\nsending request to "+ node+"\n\n")
+                json = {'val':{'view':self.view_node_list,'clock': self.view_clock}}
+                r = requests.put(node + '/secondary_update',
+                                json=json,
+                                headers={'content-type':'application/json'},
+                                timeout=1,
+                                )
+            else:
+                continue
+            # set up the network trafficking portion here
+        # for ip_port in self.view_node_list:
 
 
     def determine_replicas(self):
@@ -309,36 +327,6 @@ def put_in_kvs(key):
 
             print("Key already exists", KVSDict)
 
-            #Experimental
-            #
-            # local = KVSDict[key]['clock']
-            # incoming = request.form['causal_payload']
-            # # if local < incoming then update local with incoming
-            # if (request.form['causal_payload'] != '') \
-            #         and int(KVSDict[key]['clock']) < int(request.form['causal_payload']):
-            #     KVSDict[key]['val'] = request.form['val'] #update the val
-            #     KVSDict[key]['clock'] = str(request.form['causal_payload']) #update the clock
-            #     KVSDict[key]['timestamp'] = str(request.form['timestamp']) #update the timestamp
-            #     json_resp = json.dumps(
-            #         {
-            #             'replaced': 'True',
-            #             'msg': 'Value of existing key replaced'
-            #         }
-            #     )
-            #     # Return the response
-            #     return Response(
-            #         json_resp,
-            #         status=200,
-            #         mimetype='application/json'
-            #     )
-            # elif (request.form['causal_payload'] != '') \
-            #         and int(KVSDict[key]['clock']) == int(request.form['causal_payload']):
-            #     #break the tie
-            #     local = int(KVSDict[key]['timestamp'])
-            #     incoming = int(request.form['timestamp'])
-            #
-            #     if local >incoming:
-
 
             KVSDict[key]['val'] = request.form['val']
             KVSDict[key]['clock'] = KVSDict[key]['clock'] + 1
@@ -434,13 +422,51 @@ def put_in_kvs(key):
         return 'fall through error kv-store/<key>'
 
 
-@app.route('/kv-store/update_view', methods=['PUT'])
-def update_view():
-    # print(request.form)
+# for recieving updates from a node that recieved the initial update
+@app.route('/secondary_update/<key>', methods=['put'])
+def secondary_update():
     if request.form['type'] == 'add':
         # update the view list with a new server identity
         this_server.view_node_list.append(request.form['ip_port'])
         # this_server.update_state() #update state will
+        json_resp = json.dumps({
+            "msg": "success",
+            "node_id": this_server.my_identity(),
+            "number_of_nodes": len(this_server.view_node_list),
+            "all servers": this_server.view_node_list,
+        })
+        return Response(
+            json_resp,
+            status=200,
+            mimetype='application/json'
+        )
+    elif request.form['type'] == 'remove':
+        this_server.view_node_list.remove(request.form['ip_port'])
+        json_resp = json.dumps({
+            "msg": "success",
+            "node_id": this_server.my_identity(),
+            "number_of_nodes": len(this_server.view_node_list),
+            "all servers": this_server.view_node_list,
+        })
+        return Response(
+            json_resp,
+            status=200,
+            mimetype='application/json'
+        )
+    else:
+        return Response(
+            json.dumps({'update_view': 'fall through no match'})
+        )
+
+
+@app.route('/kv-store/update_view', methods=['PUT'])
+def update_view():
+    #print(request.form)
+    if request.form['type'] == 'add':
+        # update the view list with a new server identity
+        this_server.view_node_list.append(request.form['ip_port'])
+        this_server.update_view() #update state will
+
         json_resp = json.dumps({
             "msg": "success",
             "node_id": this_server.my_identity(),
@@ -499,7 +525,8 @@ def gossip():
     print("----->",newDict)
     json_resp = json.dumps({
         "msg": "success",
-        "dict": newDict
+        "dict": newDict,
+        "kvsdict": KVSDict,
     })
     return Response(
         json_resp,
@@ -507,6 +534,16 @@ def gossip():
         mimetype='application/json'
     )
 
+@app.route('/print_kvs', methods=['GET'])
+def print_kvs():
+    json_resp = json.dumps({
+        'dict':KVSDict,
+    })
+    return Response(
+        json_resp,
+        status=200,
+        mimetype='application/json',
+    )
 
 if __name__ == '__main__':
     app.run(host=this_server.my_ip, port=this_server.my_port)
