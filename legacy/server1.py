@@ -109,8 +109,8 @@ def compare(key1, key2):
 
 
 #docker = 'loading from docker env variables
-docker = 'loading statically defined server'
-#docker = 'load state from command line'
+#docker = 'loading statically defined server'
+docker = 'load state from command line'
 
 
 
@@ -168,13 +168,17 @@ class Node(object):
     def update_view(self):
         for node in self.view_node_list:
             if node != self.my_ip_port:
-                print("\n\nsending request to "+ node+"\n\n")
-                json = {'val':{'view':self.view_node_list,'clock': self.view_clock}}
-                r = requests.put(node + '/secondary_update',
-                                json=json,
+                print("\n\nsending request to http://localhost:5001 \n\n")
+                r = requests.put('http://localhost:5001' + '/secondary_update',
+                                json={
+                    'val':'test',
+                    'result':'it made it',
+                    'type':'add',
+                },
                                 headers={'content-type':'application/json'},
-                                timeout=1,
+                                timeout=2,
                                 )
+                print(r)
             else:
                 continue
             # set up the network trafficking portion here
@@ -201,25 +205,47 @@ class Node(object):
 this_server = Node(sys.argv)
 
 
-def ping():
-    # make a get request and send it to the target IP, set timeout
-    # for 1s, test and possibly reset it to 2s
-    return 'up'
+# for recieving updates from a node that recieved the initial update
+@app.route('/secondary_update', methods=['PUT'])
+def secondary_update():
 
-#  The ping route returns this server's IP and
+    #Get a python dict with the data here
 
-@app.route('/kv-store/ping', methods=['GET'])
-def ping():
-    json_resp = json.dumps({
-        'result': 'success',
-        'time': time.time(),
-        'remote_server_ip': this_server.my_ip,
-    })
-    return Response(
-        json_resp,
-        status=403,
-        mimetype='application/json'
-    )
+    print("\nSERVER: "+ this_server.my_ip_port+ "reporting secondary update view")
+    print("\nNEW VIEW IS: "+str(this_server.view_node_list))
+    if request.form['type'] == 'add':
+        # update the view list with a new server identity
+        print("second server add working")
+        this_server.view_node_list.append(request.form['ip_port'])
+        # this_server.update_state() #update state will
+        json_resp = json.dumps({
+            "msg": "success",
+            "node_id": this_server.my_identity(),
+            "number_of_nodes": len(this_server.view_node_list),
+            "all servers": this_server.view_node_list,
+        })
+        return Response(
+            json_resp,
+            status=200,
+            mimetype='application/json'
+        )
+    elif request.form['type'] == 'remove':
+        this_server.view_node_list.remove(request.form['ip_port'])
+        json_resp = json.dumps({
+            "msg": "success",
+            "node_id": this_server.my_identity(),
+            "number_of_nodes": len(this_server.view_node_list),
+            "all servers": this_server.view_node_list,
+        })
+        return Response(
+            json_resp,
+            status=200,
+            mimetype='application/json'
+        )
+    else:
+        return Response(
+            json.dumps({'update_view': 'fall through no match'})
+        )
 
 
 def shutdown_server():
@@ -327,11 +353,7 @@ def put_in_kvs(key):
 
         if key in KVSDict:
 
-
-
             print("Key already exists", KVSDict)
-
-
             KVSDict[key]['val'] = request.form['val']
             KVSDict[key]['clock'] = KVSDict[key]['clock'] + 1
             KVSDict[key]['timestamp'] = str(time.time())
@@ -426,41 +448,6 @@ def put_in_kvs(key):
         return 'fall through error kv-store/<key>'
 
 
-# for recieving updates from a node that recieved the initial update
-@app.route('/secondary_update/<key>', methods=['put'])
-def secondary_update():
-    if request.form['type'] == 'add':
-        # update the view list with a new server identity
-        this_server.view_node_list.append(request.form['ip_port'])
-        # this_server.update_state() #update state will
-        json_resp = json.dumps({
-            "msg": "success",
-            "node_id": this_server.my_identity(),
-            "number_of_nodes": len(this_server.view_node_list),
-            "all servers": this_server.view_node_list,
-        })
-        return Response(
-            json_resp,
-            status=200,
-            mimetype='application/json'
-        )
-    elif request.form['type'] == 'remove':
-        this_server.view_node_list.remove(request.form['ip_port'])
-        json_resp = json.dumps({
-            "msg": "success",
-            "node_id": this_server.my_identity(),
-            "number_of_nodes": len(this_server.view_node_list),
-            "all servers": this_server.view_node_list,
-        })
-        return Response(
-            json_resp,
-            status=200,
-            mimetype='application/json'
-        )
-    else:
-        return Response(
-            json.dumps({'update_view': 'fall through no match'})
-        )
 
 
 @app.route('/kv-store/update_view', methods=['PUT'])
@@ -469,7 +456,8 @@ def update_view():
     if request.form['type'] == 'add':
         # update the view list with a new server identity
         this_server.view_node_list.append(request.form['ip_port'])
-        this_server.update_view() #update state will
+        print('appended'+request.form['ip_port'])
+        this_server.update_view()
 
         json_resp = json.dumps({
             "msg": "success",
