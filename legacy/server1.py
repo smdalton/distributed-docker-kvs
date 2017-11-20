@@ -29,7 +29,28 @@ app = Flask(__name__)
 
 def gossip():
     try:
-        #print ("Gossiping: ", KVSDict)
+        # print ("Gossiping: ", KVSDict)
+        # we want to send the dictionary over the network to another server
+        # the other server will compare the dictionary
+
+
+        '''
+        print("\n===============SENDING GOSSIP==============")
+        print("\n\nsending request to http://" + node)
+        r = requests.put('http://' + node + '/secondary_update',
+                         json={
+                             'val': 'test',
+                             'result': 'it made it',
+                             'type': 'add',
+                             'dict': json.dumps(KVSDict),
+                         },
+                         headers={'content-type': 'application/json'},
+                         timeout=1,
+                         )
+        print(r + "\n")
+
+        '''
+
 
         return
     except Exception as e:
@@ -104,18 +125,9 @@ def compare(key1, key2):
         logging.debug("List of all IP:PORT values in the VIEW: " + str(viewList))
 """
 
-
-
-
-
 #docker = 'loading from docker env variables
 #docker = 'loading statically defined server'
 docker = 'load state from command line'
-
-
-
-
-
 
 # Like this: $python server1.py 3 "localhost:5000, localhost:5001, localhost:5002" "localhost:5000"
 #  where 3 is the number of nodes and the string is the VIEW variable
@@ -130,7 +142,7 @@ class Node(object):
     live_servers = []
     replicas = []
     view_clock = 0
-
+    absent_servers = []
     def __init__(self, env_vars):
 
         if docker == 'loading statically defined server':
@@ -166,39 +178,37 @@ class Node(object):
 
 
     def update_view(self):
+        node_test = 'localhost:5001'
         for node in self.view_node_list:
             if node != self.my_ip_port:
-                print("\n\nsending request to http://localhost:5001 \n\n")
-                r = requests.put('http://localhost:5001' + '/secondary_update',
-                                json={
-                    'val':'test',
-                    'result':'it made it',
-                    'type':'add',
-                },
-                                headers={'content-type':'application/json'},
-                                timeout=2,
-                                )
-                print(r)
+                try:
+                    print("\n===============UPDATING VIEW==============")
+                    print("\n\nsending request to http://"+ node + "\n")
+                    r = requests.put('http://' + node + '/secondary_update',
+                                    json={
+                        'val':'test',
+                        'result':'it made it',
+                        'type':'add',
+                        'view': this_server.view_node_list,
+                    },
+                                    headers={'content-type':'application/json'},
+                                    timeout=1,
+                                    )
+                    print(r + "\n")
+                except:
+                    #suppress server error output here
+                    print("server at address: "+ node +" unreachable\n\n")
+                    #add server to absent list when it doesnt respond
+                    self.absent_servers.append(node)
+                    pass
             else:
                 continue
-            # set up the network trafficking portion here
-        # for ip_port in self.view_node_list:
 
-
-    def determine_replicas(self):
-        # sort to order in precedence
-        self.view_node_list = self.view_node_list.sort()
-
-        # determine the live servers
-        self.live_servers = []
-        # pick the first K ip's from view that ARE LIVE and make them replicas
-
-        for ip in self.view_node_list:
-            if ping(ip) == 'up':
-                self.live_servers.append((ip, 'up'))
-            else:
-                self.live_Servers.append((ip, 'down'))
-        number_replicas = int(self.number_of_replicas)
+    def remove_dups(self):
+        for node in self.view_node_list:
+            if self.view_node_list.count(node) > 1:
+                self.view_node_list.remove(node)
+        pass
 
 
 # state object for this node
@@ -208,44 +218,25 @@ this_server = Node(sys.argv)
 # for recieving updates from a node that recieved the initial update
 @app.route('/secondary_update', methods=['PUT'])
 def secondary_update():
-
-    #Get a python dict with the data here
-
-    print("\nSERVER: "+ this_server.my_ip_port+ "reporting secondary update view")
-    print("\nNEW VIEW IS: "+str(this_server.view_node_list))
-    if request.form['type'] == 'add':
-        # update the view list with a new server identity
-        print("second server add working")
-        this_server.view_node_list.append(request.form['ip_port'])
-        # this_server.update_state() #update state will
-        json_resp = json.dumps({
-            "msg": "success",
-            "node_id": this_server.my_identity(),
-            "number_of_nodes": len(this_server.view_node_list),
-            "all servers": this_server.view_node_list,
-        })
-        return Response(
-            json_resp,
-            status=200,
-            mimetype='application/json'
-        )
-    elif request.form['type'] == 'remove':
-        this_server.view_node_list.remove(request.form['ip_port'])
-        json_resp = json.dumps({
-            "msg": "success",
-            "node_id": this_server.my_identity(),
-            "number_of_nodes": len(this_server.view_node_list),
-            "all servers": this_server.view_node_list,
-        })
-        return Response(
-            json_resp,
-            status=200,
-            mimetype='application/json'
-        )
-    else:
-        return Response(
-            json.dumps({'update_view': 'fall through no match'})
-        )
+    print("\nSERVER: "+ this_server.my_ip_port+ "  reporting secondary update view")
+    # turn it into a list of strings
+    new_view = map(str,request.json['view'])
+    #print("\n" + str(type(new_view)) + "\n")
+    # sanitize any duplicates
+    this_server.view_node_list = new_view
+    this_server.remove_dups()
+    print("server @" + this_server.my_ip_port+ " NEW VIEW IS: \n"+str(this_server.view_node_list))
+    json_resp = json.dumps({
+        "msg": "success",
+        "node_id": this_server.my_identity(),
+        "number_of_nodes": len(this_server.view_node_list),
+        "all servers": this_server.view_node_list,
+    })
+    return Response(
+        json_resp,
+        status=200,
+        mimetype='application/json'
+    )
 
 
 def shutdown_server():
@@ -455,10 +446,10 @@ def update_view():
     #print(request.form)
     if request.form['type'] == 'add':
         # update the view list with a new server identity
-        this_server.view_node_list.append(request.form['ip_port'])
+        this_server.view_node_list.append(str(request.form['ip_port']))
         print('appended'+request.form['ip_port'])
         this_server.update_view()
-
+        this_server.remove_dups()
         json_resp = json.dumps({
             "msg": "success",
             "node_id": this_server.my_identity(),
@@ -472,6 +463,9 @@ def update_view():
         )
     elif request.form['type'] == 'remove':
         this_server.view_node_list.remove(request.form['ip_port'])
+        print(this_server.my_ip_port + ': REMOVED'+request.form['ip_port'])
+        this_server.update_view()
+        this_server.remove_dups()
         json_resp = json.dumps({
             "msg": "success",
             "node_id": this_server.my_identity(),
@@ -511,6 +505,8 @@ def server_name():
 
 @app.route('/gossip', methods=['PUT'])
 def gossip():
+
+    print("+++++++ RECIEVING GOSSIP++++++++")
     DictA = ast.literal_eval(request.form['dict'])
     newDict = dict()
     newDict = merge(KVSDict, DictA)
