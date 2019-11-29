@@ -1,14 +1,15 @@
-# HW3 spec: Fault Tolerant Key-value Store
+# Fault Tolerant Key-value Store
 
-# Instructions:
+# Description:
  
-In the previous assignments you built a key-value store with forwarding. In this homework, you will extend the key-value store to be fault tolerant, available and eventually consistent.
 ## Partiton-tolerance, Availability and Consistency
-Your key-value store should be fault tolerant: it will continue functioning in the face of network partitions and node failure. You might look into the following docker commands "docker network disconnect" and "docker network connect" to learn about adding and removing nodes from a network.
-Due to the CAP theorem, we know that we cannot have a fault tolerant key-value store that is both available and strongly consistent. In this assignment, we favor availability over strong consistency. Your key-value store should always return responses to requests, even if it cannot guarantee the most recent data.
-Even though we cannot guarantee strong consistency, it is possible to guarantee eventual consistency and convergence. Right after a network is healed, the key-value store can return stale data. However, you key-values store should guarantee that the data is up-to date after a certain time bound. In other words, the key-value store should have the property of bounded staleness. The time bound for this assignment is 10 seconds.
+This key-value store is fault tolerant: it will continue functioning in the face of network partitions and node failure.
+
+Due to the CAP theorem, we cannot have a fault tolerant key-value store that is both available and strongly consistent. In this implementation, we favor availability over strong consistency. This key-value store should always return responses to requests, even if it cannot guarantee the most recent data.
+Even though we cannot guarantee strong consistency, it is possible to guarantee eventual consistency and convergence. Right after a network is healed, the key-value store can return stale data. However, the key-value store should guarantee that the data is up-to date after a time bound. In other words, the key-value store should have the property of bounded staleness. The time bound for this implementation is 10 seconds.
 ## Conflict Resolution
-It is possible that after a network is healed, two nodes end up with different values for the same key. Such a conflict should be resolved using causal order, if it can be established. If the events are causally concurrent, then the tie should be resolved using the timestamps on replica nodes. Note that your key-value store needs to have a mechanism to establish a causal relation between events, such as vector clocks.
+It is possible that after a network is healed, two nodes end up with different values for the same key. Such a conflict should be resolved using causal order, if it can be established. This is implemented via an internal vector clock and time stamps as a fallback. If the events are causally concurrent, then the tie will be resolved using the timestamps on replica nodes. 
+
 Starting the key-value store
 To start a key value store we use the following environmental variables.
 * "K" is the number of replicas. There are two cases here:
@@ -25,10 +26,10 @@ docker run -p 8084:8080 --ip=10.0.0.24 --net=mynet -e K=3 -e VIEW="10.0.0.21:808
 In the above example, you will assign three of nodes as replicas and one as proxy.
 # API
 ## Key-value Operations
-GET, PUT requests are a bit different from the previous assignments. Now they return extra information about the node that processed the write and causal order. The information used to establish causal order is stored in "causal_payload" and "timestamp" fields. The "causal_payload" field is used to establish causality between events. For example, if a node performs a write A followed by write B, then the corresponding causal payloads X_a and X_b should satisfy inequality X_a < X_b. Similarly, a causal payload X of a send event should be smaller that the causal payload Y of the corresponding receive event, i.e. X < Y. The value of the "causal_payload" field is solely depends on the mechanism you use to establish the causal order. The value of the "timestamp" field is the wall clock time on the replica that first processed the write.
+GET, PUT requests return extra information about the node that processed the write and causal order. The information used to establish causal order is stored in "causal_payload" and "timestamp" fields. The "causal_payload" field is used to establish causality between events. For example, if a node performs a write A followed by write B, then the corresponding causal payloads X_a and X_b should satisfy inequality X_a < X_b. Similarly, a causal payload X of a send event should be smaller that the causal payload Y of the corresponding receive event, i.e. X < Y. The value of the "causal_payload" field is solely depends on the mechanism you use to establish the causal order. The value of the "timestamp" field is the wall clock time on the replica that first processed the write.
 To illustrate, let a client A writes a key, and a client B reads that key and then writes it, B's write should replace A's write (even if it lands on a different server). To make sure that this works, we will always pass the causal payload of previous reads into future writes. You must ensure that B's read returns a causal payload higher than the payload associated with A's write!
 To consider another example, let 2 clients write concurrently to 2 different nodes respectively. And let T_1 and T_2 be the corresponding write timestamps measured according to the nodes' wall clocks. If T_1 > T_2 then the first write wins. If T_1 < T_2 then the second write wins. However, how can we resolve the writing conflict if T_1 == T_2? Can we use the identity of the nodes?
-For better performance, no matter which node is queried, you may want to redirect requests so all replicas handle approximately equal number of requests.
+For better performance, no matter which node is queried, sharding and redirection of requests may increase performance so all replicas handle approximately equal number of requests.
  
 * A GET request to "/kv-store/<key>" with the data field "causal_payload=<causal_payload>" retrieves the value that corresponds to the key. The "causal_payload" data field is the causal payload observed by the client’s most recent read or write operation. A response object has the following fields: "result", "value", "node_id", "causal_payload", "timestamp". A response to a successful request looks like this: 
 ```
@@ -52,7 +53,7 @@ For better performance, no matter which node is queried, you may want to redirec
 * DELETE. You do not need to implement deletion of keys in this assignment.
  
 ## Obtaining replica information
-Implement the following methods to expose information about the nodes to the external world:
+The following methods are implemented to expose information about the nodes to the external world:
  
 * A GET request on "/kv-store/get_node_details" returns if the node is a replica or forwarding instance. For example, a successful response for the following curl request curl -X GET http://localhost:8083/kv-store/get_node_details 
 ```
@@ -69,7 +70,7 @@ Implement the following methods to expose information about the nodes to the ext
     }
 ```
 ## Adding and Deleting nodes
-We use "update_view" request to add and delete nodes. For example, let’s say we started a key value-store with 3 nodes, so the value of K=3. If we add a new node, then number of nodes in the system increases, and you will need to ensure that:
+We use "update_view" request to add and delete nodes. For example, let’s say we started a key value-store with 3 nodes, so the value of K=3. If we add a new node, then number of nodes in the system increases, as a result the following happen:
        1. The new node converges on the keys in the key-value store if it is to be a replica. ( |Nodes| <= K )
        2. The new node behaves as proxy if it is to be a proxy ( |Nodes| > K )
 * A PUT request on "/kv-store/update_view?type=add" with the data payload "ip_port=<ip_port>" adds the node to the key-value store. A successful response returns the node id of the new node, and the total number of nodes. It should look like:
